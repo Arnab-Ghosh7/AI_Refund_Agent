@@ -1,0 +1,56 @@
+# NoonSupport - Git Ignore Settings
+
+# Documents (Do not push docx and pdf explanation files)
+*.pdf
+*.docx
+Worknoon_AI_Refund_Agent_Detailed_Documentation.pdf
+Worknoon_AI_Refund_Agent_Project_Explanation.docx
+
+# Databases (Local sandbox database files)
+backend/crm.db
+*.db
+*.sqlite
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.production
+backend/.env
+frontend/.env
+
+# Node Dependencies & Build Outputs
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+build/
+.next/
+out/
+
+# Python Cache & Virtual Environments
+__pycache__/
+backend/app/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.log
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# OS Metadata
+.DS_Store
+Thumbs.db
