@@ -11,12 +11,12 @@ This system showcases a resilient, secure, and production-ready **AI Customer Su
 The system is styled from the ground up with a tailored **HSL Dark Mode** dashboard featuring:
 * **Support Chat Terminal**: A fully interactive simulator where you can act as a customer and request returns or try to hack the agent.
 * **Live Agent Intelligence Console (Step Trace)**: A real-time, side-by-side terminal displaying exactly what the agent is *thinking* behind the scenes—including thoughts, tool arguments, database observations, validation checks, and security alerts.
-* 👥 **Mock CRM database**: A beautiful table-based viewer displaying the seeded **15 customer records**, their order lines, item clearance flags, delivery logs, and a **Refund History Audit Ledger**.
-* 📜 **Refund Policy Viewer**: Direct rendering of the strict corporate rules that guide the agent.
+* **Mock CRM database**: A beautiful table-based viewer displaying the seeded **15 customer records**, their order lines, item clearance flags, delivery logs, and a **Refund History Audit Ledger**.
+* **Refund Policy Viewer**: Direct rendering of the strict corporate rules that guide the agent.
 
 ---
 
-## ⚡ Technical Architecture Overview
+## Technical Architecture Overview
 
 The codebase is split into three highly isolated, single-responsibility layers:
 
@@ -74,9 +74,9 @@ Follow these simple instructions to launch the entire multi-container stack inst
    ```
    Open the `.env` file and insert your API key:
    ```env
-   OPENAI_API_KEY=your-actual-openai-key
+   OPENAI_API_KEY=actual-openai-key
    # OR
-   ANTHROPIC_API_KEY=your-actual-anthropic-key
+   ANTHROPIC_API_KEY=actual-anthropic-key
    ```
    *Note: If left blank, the application will boot in resilient Safe-Mock Mode.*
 
@@ -87,9 +87,9 @@ Follow these simple instructions to launch the entire multi-container stack inst
    ```
 
 4. **Access the Portals**:
-   * 🌐 **Frontend UI**: [http://localhost:3000](http://localhost:3000)
-   * ⚙️ **Backend API Specs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-   * 🗄️ **MySQL Database**: `localhost:3306` (Credentials in `.env`)
+   * **Frontend UI**: [http://localhost:3000](http://localhost:3000)
+   * **Backend API Specs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+   * **MySQL Database**: `localhost:3306` (Credentials in `.env`)
 
 5. **Stop Containers**:
    ```bash
@@ -98,7 +98,7 @@ Follow these simple instructions to launch the entire multi-container stack inst
 
 ---
 
-## 🎯 Verification Guide: What to Test
+## Verification Guide: What to Test
 
 The chat UI includes an **Interactive Test Case Deck** at the bottom. Simply click on a card to automatically run one of the following edge-case scenarios:
 
@@ -139,7 +139,7 @@ The chat UI includes an **Interactive Test Case Deck** at the bottom. Simply cli
 
 ---
 
-## 🔒 Prompt Injection Attack Defenses
+## Prompt Injection Attack Defenses
 
 Try these malicious attack suggestions to evaluate the agent's resilience:
 
