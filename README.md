@@ -6,11 +6,11 @@ This system showcases a resilient, secure, and production-ready **AI Customer Su
 
 ---
 
-## 🌟 Visual Excellence & Premium Interface
+## Visual Excellence & Premium Interface
 
 The system is styled from the ground up with a tailored **HSL Dark Mode** dashboard featuring:
-* 💬 **Support Chat Terminal**: A fully interactive simulator where you can act as a customer and request returns or try to hack the agent.
-* 🧠 **Live Agent Intelligence Console (Step Trace)**: A real-time, side-by-side terminal displaying exactly what the agent is *thinking* behind the scenes—including thoughts, tool arguments, database observations, validation checks, and security alerts.
+* **Support Chat Terminal**: A fully interactive simulator where you can act as a customer and request returns or try to hack the agent.
+* **Live Agent Intelligence Console (Step Trace)**: A real-time, side-by-side terminal displaying exactly what the agent is *thinking* behind the scenes—including thoughts, tool arguments, database observations, validation checks, and security alerts.
 * 👥 **Mock CRM database**: A beautiful table-based viewer displaying the seeded **15 customer records**, their order lines, item clearance flags, delivery logs, and a **Refund History Audit Ledger**.
 * 📜 **Refund Policy Viewer**: Direct rendering of the strict corporate rules that guide the agent.
 
