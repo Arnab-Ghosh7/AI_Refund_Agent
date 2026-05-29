@@ -5,8 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Dict, Any
-
-# Local imports
 from app.database import get_db, init_db, Customer, Order, OrderItem, RefundHistory
 from app.seed import seed_data
 from app.agent import run_agent_chat, agent_logger
@@ -14,10 +12,8 @@ from app.agent import run_agent_chat, agent_logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize database tables on startup
 try:
     init_db()
-    # Auto-seed database with initial data on startup if empty
     db = next(get_db())
     if db.query(Customer).count() == 0:
         logger.info("Database is empty. Running initial seed...")
@@ -31,16 +27,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for Vite dev server (port 3000) and other host connections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For robust local development, allow all
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==================== Pydantic Models ====================
 
 class ChatRequest(BaseModel):
     session_id: str
@@ -50,7 +44,6 @@ class ChatResponse(BaseModel):
     response: str
     logs: List[Dict[str, Any]]
 
-# ==================== Routes ====================
 
 @app.get("/api/health")
 def health_check():
@@ -78,10 +71,8 @@ def chat_endpoint(payload: ChatRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="session_id and message are required.")
         
     try:
-        # Run agent loop
         response_text = run_agent_chat(session_id, message, db)
         
-        # Pull execution logs for this session
         session_logs = agent_logger.get_logs(session_id)
         
         return ChatResponse(
@@ -90,7 +81,6 @@ def chat_endpoint(payload: ChatRequest, db: Session = Depends(get_db)):
         )
     except Exception as e:
         logger.error(f"Error in chat endpoint: {e}")
-        # Log to agent logger
         agent_logger.log(session_id, "error", "Endpoint Crash", str(e))
         raise HTTPException(status_code=500, detail=f"Internal agent error: {str(e)}")
 
@@ -152,7 +142,6 @@ def get_crm_data(db: Session = Depends(get_db)):
                 "orders": orders
             })
             
-        # Also grab refund transactions list
         refunds = db.query(RefundHistory).order_by(RefundHistory.processed_at.desc()).all()
         refund_list = []
         for r in refunds:
@@ -185,7 +174,6 @@ def reset_database(db: Session = Depends(get_db)):
     try:
         logger.info("Admin triggered database reset and seed...")
         seed_data(db)
-        # Clear all agent logs
         for k in list(agent_logger.traces.keys()):
             agent_logger.clear(k)
         return {"status": "success", "message": "Database and execution traces have been reset successfully!"}

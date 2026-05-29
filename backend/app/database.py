@@ -12,43 +12,33 @@ logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
-# Database Connection URL configuration
 MYSQL_USER = os.getenv("MYSQL_USER", "noon_admin")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "noon_secure_pass")
 MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
 MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "noon_crm")
 
-# Construct URL
-# Use pymysql driver. If host is 'localhost' and connection fails (or no MySQL is present),
-# we fall back to SQLite for robust out-of-the-box local executions!
 MYSQL_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
 
-# Dynamic fallback mechanism
 engine = None
 try:
-    # Try connecting to MySQL if MYSQL_HOST is set to 'db' or we are running in docker,
-    # or just try it. We set a small connect_timeout so it fails fast if not running.
     logger.info(f"Attempting to connect to MySQL database at {MYSQL_HOST}:{MYSQL_PORT}...")
     engine = create_engine(
         MYSQL_URL, 
         pool_pre_ping=True, 
         connect_args={"connect_timeout": 5}
     )
-    # Trigger a quick connection check
     connection = engine.connect()
     connection.close()
     logger.info("Successfully connected to MySQL database!")
 except Exception as e:
     logger.warning(f"MySQL connection failed: {e}. Falling back to SQLite for local development resilience!")
-    # Fallback to local SQLite file
     SQLITE_URL = "sqlite:///./crm.db"
     engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
     logger.info("Successfully initialized SQLite database!")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# ==================== Models ====================
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -57,7 +47,7 @@ class Customer(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
     phone = Column(String(50), unique=True, index=True, nullable=False)
-    tier = Column(String(20), default="Regular")  # Regular, VIP
+    tier = Column(String(20), default="Regular")   
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     orders = relationship("Order", back_populates="customer", cascade="all, delete-orphan")
@@ -70,7 +60,7 @@ class Order(Base):
     purchase_date = Column(DateTime(timezone=True), nullable=False)
     delivery_date = Column(DateTime(timezone=True), nullable=True)
     total_amount = Column(Float, nullable=False)
-    status = Column(String(50), default="Pending")  # Processing, Shipped, Delivered, Cancelled
+    status = Column(String(50), default="Pending") 
     payment_method = Column(String(50), default="Credit Card")
     
     customer = relationship("Customer", back_populates="orders")
@@ -86,7 +76,7 @@ class OrderItem(Base):
     price = Column(Float, nullable=False)
     quantity = Column(Integer, default=1)
     is_final_sale = Column(Boolean, default=False)
-    is_refunded = Column(Boolean, default=False)  # State flag to prevent multiple refunds
+    is_refunded = Column(Boolean, default=False)  
     
     order = relationship("Order", back_populates="items")
 
@@ -95,17 +85,16 @@ class RefundHistory(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
-    item_id = Column(Integer, ForeignKey("order_items.id"), nullable=True) # Null if refund applies to full order
+    item_id = Column(Integer, ForeignKey("order_items.id"), nullable=True) 
     amount = Column(Float, nullable=False)
-    status = Column(String(50))  # Approved, Denied, Escalated
+    status = Column(String(50)) 
     reason = Column(String(500), nullable=False)
-    decision_reason = Column(String(1000), nullable=True)  # Detailed logic explanation from agent
+    decision_reason = Column(String(1000), nullable=True) 
     processed_at = Column(DateTime(timezone=True), server_default=func.now())
     
     order = relationship("Order", back_populates="refunds")
     item = relationship("OrderItem")
 
-# Helper to get DB session
 def get_db():
     db = SessionLocal()
     try:

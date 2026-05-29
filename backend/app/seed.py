@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 def seed_data(db: Session):
     logger.info("Clearing existing tables...")
-    # Clean up existing records to allow idempotent resets
     db.query(RefundHistory).delete()
     db.query(OrderItem).delete()
     db.query(Order).delete()
@@ -20,7 +19,6 @@ def seed_data(db: Session):
     
     now = datetime.utcnow()
     
-    # 15 Customer Profiles
     customers = [
         Customer(name="Alice Vance", email="alice.vance@example.com", phone="+1-555-0101", tier="Regular"),
         Customer(name="Bob Carter", email="bob.carter@example.com", phone="+1-555-0102", tier="VIP"),
@@ -42,12 +40,10 @@ def seed_data(db: Session):
     db.add_all(customers)
     db.commit()
     
-    # Reload customers from database to get IDs
     customer_map = {c.email: c for c in db.query(Customer).all()}
     
     logger.info("Seeding orders and order items...")
     
-    # Define relative delivery/purchase dates to make checks resilient
     orders = []
     
     # 1. Alice Vance: Standard purchase within 30 days, eligible for auto-refund
@@ -178,7 +174,6 @@ def seed_data(db: Session):
     db.add_all(orders)
     db.commit()
     
-    # Seed a pre-existing refund history record for George Brooks (Order 1007, Item 701) to simulate the double return attempt
     pre_refund = RefundHistory(
         order_id=1007,
         item_id=701,

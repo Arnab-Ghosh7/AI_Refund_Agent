@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Color Design Tokens */
   --bg-primary: #0a0b0d;
   --bg-secondary: #111318;
   --bg-tertiary: #171a22;
@@ -11,30 +10,25 @@
   --border-light: rgba(255, 255, 255, 0.06);
   --border-heavy: rgba(255, 255, 255, 0.12);
   
-  /* HSL Accents */
-  --accent-indigo: 239, 84%, 67%;    /* #6366f1 */
-  --accent-cyan: 188, 86%, 53%;      /* #06b6d4 */
-  --accent-violet: 263, 90%, 65%;    /* #8b5cf6 */
-  --accent-green: 142, 72%, 48%;     /* #10b981 */
-  --accent-amber: 37, 97%, 50%;      /* #f59e0b */
-  --accent-rose: 343, 84%, 55%;      /* #f43f5e */
+  --accent-indigo: 239, 84%, 67%;   
+  --accent-cyan: 188, 86%, 53%;      
+  --accent-violet: 263, 90%, 65%;    
+  --accent-green: 142, 72%, 48%;     
+  --accent-amber: 37, 97%, 50%;      
+  --accent-rose: 343, 84%, 55%;      
 
-  /* Text Colors */
   --text-primary: #f3f4f6;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
   
-  /* Fonts */
   --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   
-  /* Shadows */
   --shadow-sm: 0 2px 8px -1px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 10px 40px -4px rgba(0, 0, 0, 0.7);
   --shadow-glow: 0 0 24px -2px rgba(99, 102, 241, 0.25);
   
-  /* Layout Constants */
   --sidebar-width: 250px;
   --header-height: 70px;
   --panel-radius: 16px;
@@ -57,7 +51,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -76,7 +69,6 @@ body {
   background: hsl(var(--accent-indigo));
 }
 
-/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -98,7 +90,6 @@ body {
   100% { background-position: 0% 50%; }
 }
 
-/* Global Helper Classes */
 .animate-fade-in {
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

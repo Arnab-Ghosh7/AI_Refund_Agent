@@ -5,14 +5,10 @@ from datetime import datetime
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
-
-# LangChain Imports
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
-
-# Local imports
 from app.database import get_db, SessionLocal
 from app.tools import (
     get_customer_profile,
@@ -27,7 +23,6 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ==================== Agent Thread Logger ====================
 
 class ExecutionLogger:
     """
@@ -35,7 +30,6 @@ class ExecutionLogger:
     for every chat session. Useful for dashboard visualization.
     """
     def __init__(self):
-        # Format: { session_id: [ {timestamp, type, title, content, meta}, ... ] }
         self.traces: Dict[str, List[Dict[str, Any]]] = {}
 
     def clear(self, session_id: str):
@@ -45,14 +39,13 @@ class ExecutionLogger:
         if session_id not in self.traces:
             self.traces[session_id] = []
         
-        # Serialize content to string if it is a dict/list for standard display
         display_content = content
         if isinstance(content, (dict, list)):
             display_content = json.dumps(content, indent=2)
             
         self.traces[session_id].append({
             "timestamp": datetime.utcnow().isoformat() + "Z",
-            "type": log_type,  # 'thought', 'tool_call', 'tool_response', 'response', 'system', 'error'
+            "type": log_type,
             "title": title,
             "content": display_content,
             "meta": meta or {}
@@ -65,10 +58,7 @@ class ExecutionLogger:
     def get_all_logs(self) -> Dict[str, List[Dict[str, Any]]]:
         return self.traces
 
-# Global singleton logger
 agent_logger = ExecutionLogger()
-
-# ==================== Agent System Prompt ====================
 
 SYSTEM_PROMPT = """You are the NoonSupport AI Refund Agent, a highly professional, polite, and strict customer support representative for the Worknoon E-commerce platform.
 
@@ -90,8 +80,6 @@ Your primary role is to assist customers with refund requests. You must strictly
 - In your responses, explain the policy reasoning clearly so the customer understands the exact rule being applied.
 """
 
-# ==================== Model Initialization ====================
-
 def get_agent_model():
     """
     Initializes the LLM based on available API keys.
@@ -105,13 +93,11 @@ def get_agent_model():
         return ChatOpenAI(model="gpt-4o-mini", temperature=0), "OpenAI (GPT-4o-mini)"
     elif anthropic_key and anthropic_key.strip():
         logger.info("Initializing Anthropic Claude 3.5 Sonnet...")
-        # Note: ChatAnthropic from langchain_anthropic supports tool binding
         return ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0), "Anthropic (Claude 3.5 Sonnet)"
     else:
         logger.warning("No LLM API keys found in environment. Booting in Safe-Mock Mode!")
         return None, "Safe-Mock Mode (No Key Configured)"
 
-# ==================== Safe-Mock Agent Logic ====================
 
 def run_mock_agent_loop(session_id: str, message: str, db: Session) -> str:
     """
@@ -122,26 +108,20 @@ def run_mock_agent_loop(session_id: str, message: str, db: Session) -> str:
     
     msg_lower = message.lower()
     
-    # 1. Thought Trace
     agent_logger.log(session_id, "thought", "Parsing User Input", f"Analyzing message: '{message}' for refund intentions or details.")
-    
-    # Check for direct prompt injection attempt
+
     if "override" in msg_lower or "ignore" in msg_lower or "devmode" in msg_lower or "system command" in msg_lower or "manager" in msg_lower:
         agent_logger.log(session_id, "thought", "Security Flag Raised", "Prompt injection pattern detected! Activating security protocol.")
         agent_logger.log(session_id, "thought", "Safety Enforcement", "Politely rejecting systemic override attempts. Enforcing policy parameters.")
         response = "I detect an attempt to override my core operational parameters. As an automated compliance agent, I cannot bypass database guardrails or policy guidelines. Please provide a valid email/phone or order ID to proceed with your support request."
         agent_logger.log(session_id, "response", "Security Refusal Sent", response)
         return response
-
-    # Help/Reset command
     if "reset" in msg_lower:
         agent_logger.log(session_id, "thought", "System reset request", "User requested DB reset. Performing seeding.")
         response = "Your session database has been reset and seeded with the 15 mock profiles. Let me know what you would like to test!"
         agent_logger.log(session_id, "response", "Reset confirmed", response)
         return response
 
-    # 2. Extract context
-    # Let's search if the user provided an email, phone, or order ID
     import re
     email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message)
     phone_match = re.search(r'\+?\d[\d-]{7,15}', message)
@@ -150,15 +130,11 @@ def run_mock_agent_loop(session_id: str, message: str, db: Session) -> str:
     email = email_match.group(0) if email_match else None
     phone = phone_match.group(0) if phone_match else None
     order_id = int(order_match.group(1)) if order_match else None
-    
-    # Log state
     agent_logger.log(session_id, "thought", "Extracted Identifiers", {
         "extracted_email": email,
         "extracted_phone": phone,
         "extracted_order_id": order_id
     })
-
-    # Scenario A: User provides identifier (Email or Phone)
     if email or phone:
         target = email or phone
         agent_logger.log(session_id, "thought", "Invoking Tool", f"Querying customer record matching: {target}")
@@ -173,8 +149,7 @@ def run_mock_agent_loop(session_id: str, message: str, db: Session) -> str:
             return response
             
         agent_logger.log(session_id, "tool_response", "get_customer_profile (Success)", profile)
-        
-        # Now automatically query order history for them
+
         c_id = profile["customer_id"]
         agent_logger.log(session_id, "thought", "Retrieving Orders", f"Found customer '{profile['name']}' (ID: {c_id}, Tier: {profile['tier']}). Now pulling full order histories.")
         agent_logger.log(session_id, "tool_call", "get_order_history", {"customer_id": c_id})
@@ -187,48 +162,39 @@ def run_mock_agent_loop(session_id: str, message: str, db: Session) -> str:
             agent_logger.log(session_id, "response", "Empty Purchase History", response)
             return response
             
-        # Display orders nicely
         orders_str = "\n".join([f"- **Order #{o['order_id']}** (Total: ${o['total_amount']:.2f}, Status: {o['status']}, Date: {o['purchase_date']})" for o in history])
         response = f"Hello {profile['name']} ({profile['tier']} Member)!\n\nI have successfully located your profile in our CRM. I see the following orders in your account:\n{orders_str}\n\nPlease let me know the Order Number and the item you'd like to request a refund for, along with the reason!"
         agent_logger.log(session_id, "response", "Order History Displayed", response)
         return response
 
-    # Scenario B: User requests refund for a specific order ID
     if order_id:
         agent_logger.log(session_id, "thought", "Processing Refund Intent", f"User requested action on Order #{order_id}. Pulling order details to run programmatic policy compliance checks.")
         
-        # Query order to find customer
         from app.database import Order as DBOrder
         db_order = db.query(DBOrder).filter(DBOrder.id == order_id).first()
         if not db_order:
             response = f"I'm sorry, I couldn't find an Order #{order_id} in our e-commerce database. Could you please verify the number?"
             agent_logger.log(session_id, "response", "Order Not Found", response)
             return response
-            
-        # Get customer profile
+
         c_profile = get_customer_profile(db_order.customer.email, db)
-        
-        # Display items and check refund status
+
         items = db_order.items
         if not items:
             response = f"Order #{order_id} exists but contains no items."
             return response
-            
-        # Check if the user asked for a refund of a specific item, or just the order
-        # Let's inspect the message for item characteristics or pick the first item
+
         target_item = items[0]
-        # Check if they mention other items
         for it in items:
             if it.product_name.lower() in msg_lower:
                 target_item = it
                 break
-                
+
         agent_logger.log(session_id, "thought", "Evaluating Policy", f"Consulting Worknoon Refund Policy for Item: '{target_item.product_name}' in Order #{order_id}.")
         agent_logger.log(session_id, "tool_call", "get_refund_policy", {})
         policy = get_refund_policy()
         agent_logger.log(session_id, "tool_response", "get_refund_policy", "Loaded WN-POL-REF-2026-V1")
-        
-        # Determine reason
+
         reason = "Damaged item"
         if "size" in msg_lower or "color" in msg_lower or "fit" in msg_lower:
             reason = "Incorrect item"
@@ -238,8 +204,7 @@ def run_mock_agent_loop(session_id: str, message: str, db: Session) -> str:
             reason = "Item not received"
         elif "defective" in msg_lower or "broken" in msg_lower or "damaged" in msg_lower:
             reason = "Damaged item"
-            
-        # Call programmatic request_refund tool
+
         agent_logger.log(session_id, "thought", "Calling Refund Transaction Tool", f"Requesting refund for Item ID {target_item.id} (${target_item.price:.2f}) with reason '{reason}'")
         agent_logger.log(session_id, "tool_call", "request_refund", {
             "order_id": order_id,
@@ -252,28 +217,25 @@ def run_mock_agent_loop(session_id: str, message: str, db: Session) -> str:
         
         if refund_outcome["status"] == "Approved":
             agent_logger.log(session_id, "tool_response", "request_refund (Success)", refund_outcome)
-            response = f"🎉 **Refund Approved!**\n\nI have successfully processed your refund request for **{target_item.product_name}** under **Order #{order_id}**.\n\n* **Amount Refunded**: ${target_item.price:.2f}\n* **Reason**: {reason}\n* **Transaction Details**: {refund_outcome['message']}\n\nThe credit should appear in your payment method within 3-5 business days."
+            response = f"**Refund Approved!**\n\nI have successfully processed your refund request for **{target_item.product_name}** under **Order #{order_id}**.\n\n* **Amount Refunded**: ${target_item.price:.2f}\n* **Reason**: {reason}\n* **Transaction Details**: {refund_outcome['message']}\n\nThe credit should appear in your payment method within 3-5 business days."
             agent_logger.log(session_id, "response", "Refund Successful", response)
             return response
             
         elif refund_outcome["status"] == "Escalated":
             agent_logger.log(session_id, "tool_response", "request_refund (Escalated)", refund_outcome)
-            response = f"⚠️ **Human Escalation Initiated**\n\nYour refund request for **{target_item.product_name}** under **Order #{order_id}** (${target_item.price:.2f}) has been flagged and escalated to a human supervisor.\n\n* **Escalation Reason**: {refund_outcome['details']['escalation_reason']}\n* **Assigned Department**: {refund_outcome['details']['assigned_department']}\n* **Estimated Wait Time**: {refund_outcome['details']['estimated_resolution']}\n\nA human agent will contact you shortly via email."
+            response = f"**Human Escalation Initiated**\n\nYour refund request for **{target_item.product_name}** under **Order #{order_id}** (${target_item.price:.2f}) has been flagged and escalated to a human supervisor.\n\n* **Escalation Reason**: {refund_outcome['details']['escalation_reason']}\n* **Assigned Department**: {refund_outcome['details']['assigned_department']}\n* **Estimated Wait Time**: {refund_outcome['details']['estimated_resolution']}\n\nA human agent will contact you shortly via email."
             agent_logger.log(session_id, "response", "Escalation Successful", response)
             return response
             
-        else: # Denied
+        else:
             agent_logger.log(session_id, "tool_response", "request_refund (Denied)", refund_outcome)
-            response = f"❌ **Refund Request Denied**\n\nI'm sorry, but we cannot approve a refund for **{target_item.product_name}** under **Order #{order_id}** due to our corporate policy guidelines.\n\n* **Reason for Denial**: {refund_outcome['message']}\n\nIf you believe this is in error, let me know and I can escalate your session to a support supervisor."
+            response = f"**Refund Request Denied**\n\nI'm sorry, but we cannot approve a refund for **{target_item.product_name}** under **Order #{order_id}** due to our corporate policy guidelines.\n\n* **Reason for Denial**: {refund_outcome['message']}\n\nIf you believe this is in error, let me know and I can escalate your session to a support supervisor."
             agent_logger.log(session_id, "response", "Refund Denied", response)
             return response
-
-    # Scenario C: Default message
     response = "Welcome to Worknoon AI Support! I can assist you with your orders and returns.\n\nTo get started, please share your **email address** or **phone number** so I can look up your profile."
     agent_logger.log(session_id, "response", "Default Greeting", response)
     return response
 
-# ==================== Real LLM Agent Loop ====================
 
 def run_llm_agent_loop(session_id: str, message: str, db: Session, model: Any) -> str:
     """
@@ -281,9 +243,6 @@ def run_llm_agent_loop(session_id: str, message: str, db: Session, model: Any) -
     capturing all thoughts, tool invocations, and responses for logging.
     """
     agent_logger.log(session_id, "thought", "Parsing User Input (LLM)", f"Received message: '{message}'")
-    
-    # 1. Setup tools in LangChain format
-    # We define simple python wrappers as LangChain tools, passing DB session dynamically
     
     @tool
     def get_customer_profile_lc(email_or_phone: str) -> str:
@@ -333,7 +292,6 @@ def run_llm_agent_loop(session_id: str, message: str, db: Session, model: Any) -
         agent_logger.log(session_id, "tool_response", "escalate_to_human", res)
         return json.dumps(res)
 
-    # Bind tools to the model
     tools_list = [
         get_customer_profile_lc, 
         get_order_history_lc, 
@@ -343,45 +301,34 @@ def run_llm_agent_loop(session_id: str, message: str, db: Session, model: Any) -
     ]
     model_with_tools = model.bind_tools(tools_list)
     
-    # We maintain a brief local message history in memory or pass the conversation list
-    # For a high-fidelity vertical slice, we can query existing session messages
-    # Let's keep it clean: build messages list
+
     messages: List[BaseMessage] = [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=message)
     ]
-    
-    # Let's run the agent loop
-    # We allow up to 5 steps of tool execution to prevent infinite loops (protection check!)
     max_iterations = 5
     for iteration in range(max_iterations):
         agent_logger.log(session_id, "thought", f"Running Agent Loop - Step {iteration + 1}", "Generating response or tool execution details...")
         
         try:
-            # Generate next step from model
             ai_msg = model_with_tools.invoke(messages)
             
-            # Log thoughts (the text content before tool calls)
             thought_text = ai_msg.content
             if thought_text:
                 agent_logger.log(session_id, "thought", "Agent Reasoning", thought_text)
                 
             messages.append(ai_msg)
             
-            # Check for tool calls
             tool_calls = getattr(ai_msg, "tool_calls", [])
             if not tool_calls:
-                # Agent finished reasoning, return response
                 agent_logger.log(session_id, "response", "Final Agent Output", ai_msg.content)
                 return ai_msg.content
                 
-            # Execute tool calls
             for tool_call in tool_calls:
                 name = tool_call["name"]
                 args = tool_call["args"]
                 call_id = tool_call["id"]
                 
-                # Execute matching tool
                 tool_to_call = next((t for t in tools_list if t.name == name), None)
                 if not tool_to_call:
                     tool_output = f"Error: Tool {name} not found."
@@ -391,9 +338,6 @@ def run_llm_agent_loop(session_id: str, message: str, db: Session, model: Any) -
                     except Exception as te:
                         tool_output = f"Tool execution failed: {str(te)}"
                         agent_logger.log(session_id, "error", f"Tool Failure: {name}", str(te))
-                
-                # Append tool response
-                # Correct format: AIMessage(content='', tool_calls=[...]), ToolMessage(content='...', tool_call_id='...')
                 from langchain_core.messages import ToolMessage
                 messages.append(ToolMessage(content=tool_output, tool_call_id=call_id))
                 
@@ -402,13 +346,11 @@ def run_llm_agent_loop(session_id: str, message: str, db: Session, model: Any) -
             agent_logger.log(session_id, "error", "Agent Exception", error_msg)
             return "I apologize, but I encountered an internal processing error. Let me escalate this to our support team."
 
-    # Exceeded max steps
     timeout_msg = "My automated validation checks have taken too long to resolve. I will escalate this case immediately."
     agent_logger.log(session_id, "thought", "Loop Limit Exceeded", "Agent loop exceeded maximum iterations (5). Forcing escalation.")
     escalate_to_human(0, "Agent loop iteration limit exceeded", db)
     return timeout_msg
 
-# ==================== Core API entry function ====================
 
 def run_agent_chat(session_id: str, message: str, db: Session) -> str:
     """
@@ -417,13 +359,10 @@ def run_agent_chat(session_id: str, message: str, db: Session) -> str:
     """
     model, model_name = get_agent_model()
     
-    # Log startup details if session is new
     if len(agent_logger.get_logs(session_id)) == 0:
         agent_logger.log(session_id, "system", "Session Initialized", f"Active Orchestrator: {model_name}. Engine started successfully.")
         
     if model is None:
-        # Fallback to programmatic mock agent
         return run_mock_agent_loop(session_id, message, db)
     else:
-        # Execute real LLM tool-calling loop
         return run_llm_agent_loop(session_id, message, db, model)
