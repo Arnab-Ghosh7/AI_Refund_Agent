@@ -45,6 +45,18 @@ class ChatResponse(BaseModel):
     logs: List[Dict[str, Any]]
 
 
+@app.get("/")
+def home():
+    """
+    Root endpoint returning server metadata and available documentation links.
+    """
+    return {
+        "message": "Welcome to the NoonSupport Refund Agent API Backend!",
+        "documentation": "/docs",
+        "health": "/api/health",
+        "crm": "/api/crm"
+    }
+
 @app.get("/api/health")
 def health_check():
     """

@@ -22,6 +22,7 @@ frontend/.env
 # Node Dependencies & Build Outputs
 node_modules/
 frontend/node_modules/
+backend/venv/
 dist/
 frontend/dist/
 build/
