@@ -1,8 +1,5 @@
 # NoonSupport: AI Customer Support & Refund Agent Portal
 
-Welcome to **NoonSupport**, an end-to-end, high-fidelity, and fully containerized full-stack web application designed for the **Worknoon AI Engineer Technical Challenge**. 
-
-This system showcases a resilient, secure, and production-ready **AI Customer Support Refund Agent** that processes, denies, or escalates e-commerce refunds according to strict corporate guidelines and live CRM records.
 
 ---
 
