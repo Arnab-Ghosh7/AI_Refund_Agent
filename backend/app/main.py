@@ -8,6 +8,7 @@ from typing import List, Dict, Any
 from app.database import get_db, init_db, Customer, Order, OrderItem, RefundHistory
 from app.seed import seed_data
 from app.agent import run_agent_chat, agent_logger
+from app.local_ai import get_model_status
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     session_id: str
     message: str
+    conversation_history: List[str] = []
 
 class ChatResponse(BaseModel):
     response: str
@@ -67,13 +69,46 @@ def health_check():
         "api_keys_configured": {
             "openai": bool(os.getenv("OPENAI_API_KEY")),
             "anthropic": bool(os.getenv("ANTHROPIC_API_KEY"))
-        }
+        },
+        "local_neural_engine": get_model_status()
+    }
+
+@app.get("/api/ai-status")
+def ai_status():
+    """
+    Detailed view of the on-device neural stack powering the Local AI Agent.
+    Use this to prove the agent is running real pretrained models.
+    """
+    return {
+        "cloud_llm_keys_present": {
+            "openai": bool(os.getenv("OPENAI_API_KEY")),
+            "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
+        },
+        "local_neural_engine": get_model_status(),
+        "architecture": [
+            {"step": 1, "name": "Semantic Intent Classification",
+             "model": "sentence-transformers/all-MiniLM-L6-v2",
+             "method": "cosine similarity over 384-dim sentence embeddings"},
+            {"step": 2, "name": "Prompt-Injection Detection",
+             "model": "google/flan-t5-base",
+             "method": "instruction-tuned zero-shot YES/NO classification"},
+            {"step": 3, "name": "Entity Extraction",
+             "model": "google/flan-t5-base",
+             "method": "instruction-tuned key:value generation (replaces regex)"},
+            {"step": 4, "name": "Tool Planning (ReAct)",
+             "model": "google/flan-t5-base",
+             "method": "LLM picks exactly one tool from a catalog given context"},
+            {"step": 5, "name": "Response Generation",
+             "model": "google/flan-t5-base",
+             "method": "free-form instruction-tuned generation grounded in tool outputs"},
+        ],
     }
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_endpoint(payload: ChatRequest, db: Session = Depends(get_db)):
     """
-    Processes a customer chat message through the support agent loop (LLM or Safe-Mock).
+    Processes a customer chat message through the support agent loop
+    (cloud LLM if API key set, otherwise the on-device Local Neural Agent).
     Returns the agent's response along with the real-time reasoning logs.
     """
     session_id = payload.session_id.strip()
@@ -83,7 +118,10 @@ def chat_endpoint(payload: ChatRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="session_id and message are required.")
         
     try:
-        response_text = run_agent_chat(session_id, message, db)
+        response_text = run_agent_chat(
+            session_id, message, db,
+            conversation_history=payload.conversation_history,
+        )
         
         session_logs = agent_logger.get_logs(session_id)
         

@@ -55,3 +55,11 @@ pip-delete-this-directory.log
 # OS Metadata
 .DS_Store
 Thumbs.db
+
+# Interview Defense & Temp Update Folders/Zips
+INTERVIEW_DEFENSE.md
+AI_Refund_Agent-main-updated (1)/
+*.zip
+.refact/
+
+

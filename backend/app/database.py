@@ -21,21 +21,23 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "noon_crm")
 MYSQL_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
 
 engine = None
+MYSQL_CONNECT_TIMEOUT = int(os.getenv("MYSQL_CONNECT_TIMEOUT", "5"))
+
 try:
-    logger.info(f"Attempting to connect to MySQL database at {MYSQL_HOST}:{MYSQL_PORT}...")
+    logger.info(f"Attempting to connect to MySQL database at {MYSQL_HOST}:{MYSQL_PORT} (timeout={MYSQL_CONNECT_TIMEOUT}s)...")
     engine = create_engine(
-        MYSQL_URL, 
-        pool_pre_ping=True, 
-        connect_args={"connect_timeout": 5}
+        MYSQL_URL,
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": MYSQL_CONNECT_TIMEOUT}
     )
     connection = engine.connect()
     connection.close()
-    logger.info("Successfully connected to MySQL database!")
+    logger.info("Successfully connected to MySQL database! Using SQLAlchemy ORM with MySQL backend.")
 except Exception as e:
     logger.warning(f"MySQL connection failed: {e}. Falling back to SQLite for local development resilience!")
     SQLITE_URL = "sqlite:///./crm.db"
     engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
-    logger.info("Successfully initialized SQLite database!")
+    logger.info("Successfully initialized SQLite database! Using SQLAlchemy ORM with SQLite backend.")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
